@@ -1,0 +1,23 @@
+{
+  "manifest_version": 2,
+  "name": "Activity Tracker for n8n",
+  "version": "1.1",
+  "description": "Tracks browsing activity and sends to n8n",
+
+  "permissions": [
+    "tabs",
+    "webNavigation",
+    "storage",
+    "http://*/",
+    "https://*/"
+  ],
+
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+
+  "icons": {
+    "48": "icon-48.png"
+  }
+}

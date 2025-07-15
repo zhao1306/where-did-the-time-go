@@ -1,0 +1,720 @@
+{
+  "name": "Activity Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/activity-tracker-justinzhao9909",
+        "responseMode": "=onReceived",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -660,
+        180
+      ],
+      "id": "72271aed-a082-43a3-9869-4aa7a9814ba0",
+      "name": "Webhook",
+      "webhookId": "0e9722dc-913a-49eb-b891-5abc589b06a4"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const { eventType, url, domain = '', title = '', timestamp } = $json.body;\nconst chinaTime = new Date($json.body[0].timestamp).toLocaleTimeString(\"en-US\", {\n  timeZone: \"Asia/Shanghai\", // China timezone\n  hour: \"numeric\",\n  minute: \"2-digit\",\n  hour12: true // AM/PM format\n});\n\n$json.message = `At ${chinaTime}, user is on ${$json.body[0].domain} : ${$json.body[0].title}`;\nreturn $json;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        180
+      ],
+      "id": "6314ed2c-bf5c-4f36-af14-4d2d2473d983",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "deleteMessage",
+        "guildId": {
+          "__rl": true,
+          "value": "1375351626214412298",
+          "mode": "list",
+          "cachedResultName": "Ligmongus Land",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1377930534835064832",
+          "mode": "list",
+          "cachedResultName": "live-update",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298/1377930534835064832"
+        },
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        360
+      ],
+      "id": "c8beaf67-027c-41c2-be08-1c4ad0b246b7",
+      "name": "Delete live",
+      "webhookId": "ae6fa67d-d551-4f20-92c6-7783855ad1a3",
+      "credentials": {
+        "discordBotApi": {
+          "id": "X9qQ65y26xYCiooA",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "**Role**: Digital Activity Analyst  \n**Objective**: Analyze session data (browser, mobile, and annotations) to:  \n1. **Calculate total time spent per app/domain** (grouped by domain/app name).  \n2. **Identify focus sessions**: Continuous activity on the same domain/app (>5 min without switching).  \n3. **Context-based grouping**: Categorize activities (e.g., \"Entertainment,\" \"Work,\" \"Communication\").  \n4. **Generate a productivity report**:  \n   - Time allocation breakdown (percentage per category).  \n   - Suggested schedule adjustments for better focus.  \n\n---\n\n### **Input Handling**  \n- **Data Retrieval**:  \n  - Use Discord JSON tool to fetch:  \n    - Browser activity (`browser_sessions`)  \n    - Mobile activity (`mobile_sessions`)  \n    - Manual annotations (e.g., \"Went for a walk 8:15-8:45 PM\").  \n  - **Fetch logic**:  \n    - Start with the last 5 messages.  \n    - Expand retrieval if the earliest message does not cover the target date/range.  \n    - **Ignore** any activity outside the specified date/range.  \n\n- **Data Format Examples**:  \n  ```json\n  // Browser Sessions  \n  [{\n    \"url\": \"https://www.youtube.com/\",\n    \"title\": \"YouTube\",\n    \"timestamp\": \"2025-06-09T15:01:14.562Z\",\n    \"domain\": \"www.youtube.com\",\n    \"duration\": \"100\",\n  }]\n  \n  // Mobile Sessions  \n  {\n    \"activity\": [{\n      \"time\": \"13.38\",\n      \"name\": \"Photos\",\n      \"date\": \"6-6-25\",\n      \"duration\": \"5\",\n    }]\n  }\n  \n  // Annotations (free-text, e.g., Discord messages)  \n  \"Studied Python from 2:00 PM to 3:30 PM\"\n  ```\n\n---\n\n### **Processing Instructions**  \n1. **Time Calculation**:  \n   - For browser/mobile sessions, browser duration is in seconds while mobile duration is in minutes.  \n   - For annotations, parse explicit time ranges (e.g., \"8:15-8:45 PM\").  \n\n2. **Focus Sessions**:  \n   - Merge consecutive intervals on the same domain/app if gaps are <2 min (adjustable threshold).  \n   - Only keep sessions ≥5 min.  \n\n3. **Context Grouping**:  \n   - Predefined categories (e.g., \"YouTube\" → \"Entertainment\"; \"Gmail\" → \"Communication\").  \n   - Allow dynamic categorization for unclassified domains/apps.  \n\n4. **Output Format**:  \n   - **Summary Table**:  \n     | Category       | Time Spent | % of Day | Focus Sessions (≥5 min) |  \n     |----------------|------------|----------|--------------------------|  \n     | Work           | 2h 30m     | 15%      | 3                        |  \n   - **Suggestions**:  \n     - \"This is a suggested time schedule for tomorrow: Sleep at 12 AM, awake at 8AM, avoid using social media in the morning to increase focus\""
+        }
+      },
+      "id": "44884992-1ef1-4a4a-aa2d-01f73b788a5d",
+      "name": "Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -600,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "deleteMessage",
+        "guildId": {
+          "__rl": true,
+          "value": "1375351626214412298",
+          "mode": "list",
+          "cachedResultName": "Ligmongus Land",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1375351709928263750",
+          "mode": "list",
+          "cachedResultName": "test-send",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298/1375351709928263750"
+        },
+        "messageId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_ID', ``, 'string') }}"
+      },
+      "type": "n8n-nodes-base.discordTool",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        860
+      ],
+      "id": "66684380-a3b9-4372-a8c5-a9dd98071b72",
+      "name": "Discord1",
+      "webhookId": "38e3349b-a614-4819-960b-ae0947042c4a",
+      "credentials": {
+        "discordBotApi": {
+          "id": "X9qQ65y26xYCiooA",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "guildId": {
+          "__rl": true,
+          "value": "1375351626214412298",
+          "mode": "list",
+          "cachedResultName": "Ligmongus Land",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1377930534835064832",
+          "mode": "list",
+          "cachedResultName": "live-update",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298/1377930534835064832"
+        },
+        "limit": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        40,
+        180
+      ],
+      "id": "a7eb34bf-2680-40e5-a629-6c22c418c5a9",
+      "name": "get live",
+      "webhookId": "0db08476-121d-44d5-b9ae-eb2e7de18e3d",
+      "credentials": {
+        "discordBotApi": {
+          "id": "X9qQ65y26xYCiooA",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "1375351626214412298",
+          "mode": "list",
+          "cachedResultName": "Ligmongus Land",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1377930534835064832",
+          "mode": "list",
+          "cachedResultName": "live-update",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298/1377930534835064832"
+        },
+        "content": "={{ $json.message }}",
+        "options": {
+          "tts": true
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        360,
+        180
+      ],
+      "id": "2948a530-7d4a-40ec-9552-2e972a2410d3",
+      "name": "Send live",
+      "webhookId": "315f38bd-e441-4591-b75c-faf1399da631",
+      "credentials": {
+        "discordBotApi": {
+          "id": "X9qQ65y26xYCiooA",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "1375351626214412298",
+          "mode": "list",
+          "cachedResultName": "Ligmongus Land",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1375351709928263750",
+          "mode": "list",
+          "cachedResultName": "test-send",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298/1375351709928263750"
+        },
+        "content": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "tts": true
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "baa3a4bb-440c-4ebf-8fea-202f39f85339",
+      "name": "Send unedited",
+      "webhookId": "315f38bd-e441-4591-b75c-faf1399da631",
+      "credentials": {
+        "discordBotApi": {
+          "id": "X9qQ65y26xYCiooA",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/mobile-justinzhao9909",
+        "responseMode": "=onReceived",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -660,
+        340
+      ],
+      "id": "a0c89b7c-4a08-4c93-9180-8f651330be72",
+      "name": "Webhook for mobile",
+      "webhookId": "0e9722dc-913a-49eb-b891-5abc589b06a4"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "1375351626214412298",
+          "mode": "list",
+          "cachedResultName": "Ligmongus Land",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1375351709928263750",
+          "mode": "list",
+          "cachedResultName": "test-send",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298/1375351709928263750"
+        },
+        "content": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "tts": true
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        340
+      ],
+      "id": "f05a1237-574e-4bdb-b579-4300f4455545",
+      "name": "Send unedited1",
+      "webhookId": "315f38bd-e441-4591-b75c-faf1399da631",
+      "credentials": {
+        "discordBotApi": {
+          "id": "X9qQ65y26xYCiooA",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -520,
+        840
+      ],
+      "id": "ab57f729-e1b0-4628-b132-98f403da4e5e",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "model": "deepseek-reasoner",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        860
+      ],
+      "id": "e15157a8-9fc9-4172-93e6-52c314923892",
+      "name": "DeepSeek Chat Model",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "xTlLHcALMQYoV4kG",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "guildId": {
+          "__rl": true,
+          "value": "1375351626214412298",
+          "mode": "list",
+          "cachedResultName": "Ligmongus Land",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1375351709928263750",
+          "mode": "list",
+          "cachedResultName": "test-send",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298/1375351709928263750"
+        },
+        "limit": 40,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discordTool",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        980
+      ],
+      "id": "1f1db43c-f3df-4bf1-8fbf-59732b5d92da",
+      "name": "Discord get json",
+      "webhookId": "9a56fec5-4b4d-409e-8c27-d630e7bab5f2",
+      "credentials": {
+        "discordBotApi": {
+          "id": "X9qQ65y26xYCiooA",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Convert input to string (handles JSON/objects/raw text)\nfunction ensureString(input) {\n  if (typeof input === 'object') {\n    stringTemp = JSON.stringify(input); // Prettify JSON\n    console.log(input);\n  }\n  return String(input); // Fallback for non-objects\n}\n\n// 2. Split text into Discord-friendly chunks (≤2000 chars)\nfunction splitIntoDiscordChunks(text, maxSize) {\n  const chunks = [];\n  text = ensureString(text);\n\n  while (text.length > 0) {\n    let chunk = text.substring(0, maxSize);\n    console.log(chunk.output);\n    const lastNewLine = chunk.lastIndexOf('\\n');\n    \n    // Prefer splitting at last newline to avoid mid-line breaks\n    if (lastNewLine > 0 && chunk.length === maxSize) {\n      chunk = chunk.substring(0, lastNewLine);\n    }\n    \n    chunks.push(chunk.trim());\n    text = text.substring(chunk.length).trim();\n  }\n\n  return chunks;\n}\n\n// 3. Process input and return Discord-compatible JSON\n\nconst discordChunks = splitIntoDiscordChunks($input.first().json.output, 2000); // Reserve 2 chars for markdown\n\n// 4. Return chunks in a valid JSON object\nreturn { \n  json: {\n    chunks: discordChunks,  // Array of strings (each ≤2000 chars)\n    count: discordChunks.length,\n    note: \"Send chunks sequentially to Discord\"\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -100,
+        620
+      ],
+      "id": "a0e49186-d0bf-4cc8-a8a8-83a71066bbe9",
+      "name": "chunk"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nif (typeof $input.first().json.chunks === \"string\") {\n  return [];\n}\n\nfunction removeFirst(chunks) {\n  const shifted = chunks.shift();\n  return chunks;\n}\n\n\nconst discordChunks = removeFirst($input.first().json.chunks); \n\n\n// 4. Return chunks in a valid JSON object\nreturn { \n  json: {\n    chunks: discordChunks,\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        640
+      ],
+      "id": "a3157aa3-9d68-4821-9dcd-f9b8f9d52c81",
+      "name": "remove first chunk"
+    },
+    {
+      "parameters": {
+        "jsCode": "function takeFirst(chunks) {\n  if (typeof chunks === \"string\") {\n    return $input.first().json.chunks;\n  }\n  const shifted = chunks.shift();\n  return shifted;\n}\n\nconst discordChunks = takeFirst($input.first().json.chunks); \n\nreturn { \n    chunks: discordChunks,  \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        460
+      ],
+      "id": "846723f5-2931-4f13-8356-e24ee6a19ad2",
+      "name": "take first chunk"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "25a4579e-663b-42f8-adc8-d32f042b1af8",
+              "leftValue": "={{ typeof $json.chunks }}",
+              "rightValue": "string",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "a1287826-d059-495e-acfa-88d7cce67def",
+              "leftValue": "={{ $json.chunks }}",
+              "rightValue": "''",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        340,
+        640
+      ],
+      "id": "db65154d-80ac-420c-b1d6-87c8c975c276",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "1375351626214412298",
+          "mode": "list",
+          "cachedResultName": "Ligmongus Land",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1375351626948411474",
+          "mode": "list",
+          "cachedResultName": "general",
+          "cachedResultUrl": "https://discord.com/channels/1375351626214412298/1375351626948411474"
+        },
+        "content": "={{ $json.chunks }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        860,
+        460
+      ],
+      "id": "2ffaaba6-d23c-458e-a004-fa1a496daf60",
+      "name": "send to general",
+      "webhookId": "d3605bfa-1336-4288-8a1a-a1fb223905d6",
+      "credentials": {
+        "discordBotApi": {
+          "id": "X9qQ65y26xYCiooA",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -760,
+        620
+      ],
+      "id": "a21e2876-532f-48d2-b284-9154f228ba58",
+      "name": "When chat message received",
+      "webhookId": "bcf613a2-7bb2-473e-b6d1-144bbca3f0c5"
+    },
+    {
+      "parameters": {
+        "description": "This tool will find all entries matching a given date."
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        -20,
+        1000
+      ],
+      "id": "d521ff72-8e46-4e01-b735-584e968ac38d",
+      "name": "Call n8n Workflow Tool"
+    },
+    {
+      "parameters": {
+        "operation": "set"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        40
+      ],
+      "id": "95861169-dc62-4e14-bcdc-100a23eccf0e",
+      "name": "Redis",
+      "credentials": {
+        "redis": {
+          "id": "yzTBDFgjsqHLO0C2",
+          "name": "Redis account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send unedited",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Redis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Send live",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "get live",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook for mobile": {
+      "main": [
+        [
+          {
+            "node": "Send unedited1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord get json": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent": {
+      "main": [
+        [
+          {
+            "node": "chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chunk": {
+      "main": [
+        [
+          {
+            "node": "remove first chunk",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "take first chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "remove first chunk": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "take first chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "take first chunk": {
+      "main": [
+        [
+          {
+            "node": "send to general",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "take first chunk",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "remove first chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send to general": {
+      "main": [
+        []
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call n8n Workflow Tool": {
+      "ai_tool": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ce559109-bcc5-4514-832f-fc67e34aa26e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dcac1966feada79001e8c50b9cb75663b0ef929ddabd2e13371ca280c4ebbd01"
+  },
+  "id": "rw4iuIr3hjNLsamm",
+  "tags": []
+}
