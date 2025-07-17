@@ -96,6 +96,7 @@ function finalizeSession(url, title) {
       };
     } else {
       // Not enough total duration yet, keep accumulating
+      currentSession.fragmentedDuration += currentSession.duration;
       currentSession = {
         ...currentSession,
         url,
