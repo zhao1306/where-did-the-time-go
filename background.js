@@ -5,6 +5,7 @@ let currentSession = {
   timestamp: 0, // Store as number (ms since epoch)
   duration: 0,
   isFragmented: false,
+  fragmentedDuration: 0,
   fragmentedActivity: [],
 };
 
@@ -27,28 +28,21 @@ chrome.storage.local.get(["activityList"], (result) => {
 // Track when a tab is updated (page load completes)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab.active) {
-    processActivity(tab.url, tab.title);
+   finalizeSession(tab.url, tab.title);
   }
 });
 
 // Track when user switches tabs
 chrome.tabs.onActivated.addListener((activeInfo) => {
   chrome.tabs.get(activeInfo.tabId, (tab) => {
-    processActivity(tab.url, tab.title);
+   finalizeSession(tab.url, tab.title);
   });
 });
 
 // Core processing function
-function processActivity(url, title) {
+function finalizeSession(url, title) {
   const now = Date.now();
-  const minimumDuration = 10000;
-
-  const sanitizedActivity = {
-    url: sanitizeUrl(url),
-    title: title,
-    timestamp: new Date(now).toISOString(),
-    duration: 0,
-  };
+  const minimumDuration = 60000;
 
   // Calculate duration of last session
   if (currentSession.timestamp) {
@@ -56,27 +50,75 @@ function processActivity(url, title) {
     currentSession.duration = Math.floor(duration / 1000); // Convert to seconds
   }
 
-  if (currentSession.duration > minimumDuration) {
+  if (currentSession.isFragmented) {
+    
+    if (currentSession.duration > minimumDuration) {
+       // finilize fragmented session and add to activityList
+       activityList.push({
+        ...currentSession,
+        timestamp: new Date(currentSession.timestamp).toISOString(),
+      });
+      console.log("Activity tracked:", currentSession);
+      // also push the current session to the activityList
+      activityList.push({
+        ...currentSession,
+        timestamp: new Date(currentSession.timestamp).toISOString(),
+      });
+    }
+    else {
+      // just put the current session into the fragmented activity list
+      currentSession.fragmentedActivity.push(currentSession.title);
+      currentSession.fragmentedDuration += currentSession.duration;
+      // if the fragmented duration is greater than the minimum duration, finalize the session
+      if (currentSession.fragmentedDuration > minimumDuration) {
+        // finilize fragmented session and add to activityList
+        activityList.push({
+          ...currentSession,
+          timestamp: new Date(currentSession.timestamp).toISOString(),
+        });
+      }
+    }
+  }
+
+  else if (currentSession.duration > minimumDuration) {
     // Push a copy with ISO timestamp for sending
     activityList.push({
       ...currentSession,
       timestamp: new Date(currentSession.timestamp).toISOString(),
     });
     console.log("Activity tracked:", currentSession);
-  }
-  else {
-    // add to fragmented activity list or create new fragmented activity
-  }
-
-  // Update last activity
+      // Update last activity
   let newSession = {
     url,
     title,
     timestamp: now, // Store as number
     duration: 0,
+    isFragmented: false,
+    fragmentedDuration: 0,
+    fragmentedActivity: [],
   };
+  }
+  else {
+    //  create new fragmented activity
+    currentSession.isFragmented = true;
+    currentSession.fragmentedDuration = currentSession.duration;
+    currentSession.fragmentedActivity.push(currentSession.title);
+
+  }
+
+      // Update last activity
+      let newSession = {
+        url,
+        title,
+        timestamp: now, // Store as number
+        duration: 0,
+        isFragmented: currentSession.isFragmented,
+        fragmentedDuration: currentSession.fragmentedDuration,
+        fragmentedActivity: currentSession.fragmentedActivity,
+
+      };
   // Persist newSession to storage
-  chrome.storage.local.set({ newSession });
+  chrome.storage.local.set({ currentSession: newSession });
   // Persist activityList to storage
   chrome.storage.local.set({ activityList });
 
