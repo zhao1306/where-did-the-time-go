@@ -1,15 +1,17 @@
 // Store the last activity to detect changes
-let lastActivity = {
+let currentSession = {
   url: "",
   title: "",
   timestamp: 0, // Store as number (ms since epoch)
   duration: 0,
+  isFragmented: false,
+  fragmentedActivity: [],
 };
 
-// Restore lastActivity from storage on startup
-chrome.storage.local.get(["lastActivity"], (result) => {
-  if (result.lastActivity) {
-    lastActivity = result.lastActivity;
+// Restore currentSession from storage on startup
+chrome.storage.local.get(["currentSession"], (result) => {
+  if (result.currentSession) {
+    currentSession = result.currentSession;
   }
 });
 
@@ -48,33 +50,33 @@ function processActivity(url, title) {
     duration: 0,
   };
 
-  // Calculate duration of last activity
-  if (lastActivity.url !== "" && lastActivity.timestamp) {
-    const duration = now - lastActivity.timestamp;
-    lastActivity.duration = Math.floor(duration / 1000); // Convert to seconds
+  // Calculate duration of last session
+  if (currentSession.timestamp) {
+    const duration = now - currentSession.timestamp;
+    currentSession.duration = Math.floor(duration / 1000); // Convert to seconds
   }
 
-  if (
-    lastActivity.url !== "" &&
-    lastActivity.title !== "" &&
-    lastActivity.duration > 10
-  ) {
+  if (currentSession.duration > minimumDuration) {
     // Push a copy with ISO timestamp for sending
     activityList.push({
-      ...lastActivity,
-      timestamp: new Date(lastActivity.timestamp).toISOString(),
+      ...currentSession,
+      timestamp: new Date(currentSession.timestamp).toISOString(),
     });
-    console.log("Activity tracked:", lastActivity);
+    console.log("Activity tracked:", currentSession);
   }
+  else {
+    // add to fragmented activity list or create new fragmented activity
+  }
+
   // Update last activity
-  lastActivity = {
+  let newSession = {
     url,
     title,
     timestamp: now, // Store as number
     duration: 0,
   };
-  // Persist lastActivity to storage
-  chrome.storage.local.set({ lastActivity });
+  // Persist newSession to storage
+  chrome.storage.local.set({ newSession });
   // Persist activityList to storage
   chrome.storage.local.set({ activityList });
 
