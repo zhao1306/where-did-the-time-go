@@ -41,6 +41,10 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 
 // Core processing function
 function finalizeSession(url, title) {
+  if (url === currentSession.url && title === currentSession.title) {
+    return;
+  }
+
   const now = Date.now();
   const minimumDuration = 60000;
 
@@ -50,76 +54,94 @@ function finalizeSession(url, title) {
     currentSession.duration = Math.floor(duration / 1000); // Convert to seconds
   }
 
+  let finalizedSession = null;
+
+  // Helper: finalize and push a session
+  function pushSession(session) {
+    activityList.push({
+      ...session,
+      timestamp: new Date(session.timestamp).toISOString(),
+      // Only keep titles in fragmentedActivity
+      fragmentedActivity: session.fragmentedActivity ? [...session.fragmentedActivity] : [],
+    });
+    console.log("Activity tracked:", session);
+  }
+
+  // Case 1: Previous session was fragmented
   if (currentSession.isFragmented) {
-    
-    if (currentSession.duration > minimumDuration) {
-       // finilize fragmented session and add to activityList
-       activityList.push({
-        ...currentSession,
-        timestamp: new Date(currentSession.timestamp).toISOString(),
-      });
-      console.log("Activity tracked:", currentSession);
-      // also push the current session to the activityList
-      activityList.push({
-        ...currentSession,
-        timestamp: new Date(currentSession.timestamp).toISOString(),
-      });
-    }
-    else {
-      // just put the current session into the fragmented activity list
+    // Add the last activity's title to the fragmentedActivity array
+    if (currentSession.title) {
+      if (!currentSession.fragmentedActivity) currentSession.fragmentedActivity = [];
       currentSession.fragmentedActivity.push(currentSession.title);
       currentSession.fragmentedDuration += currentSession.duration;
-      // if the fragmented duration is greater than the minimum duration, finalize the session
-      if (currentSession.fragmentedDuration > minimumDuration) {
-        // finilize fragmented session and add to activityList
-        activityList.push({
-          ...currentSession,
-          timestamp: new Date(currentSession.timestamp).toISOString(),
-        });
-      }
+    }
+    // If total fragmented duration now exceeds minimum, finalize the fragmented session
+    if (currentSession.fragmentedDuration > minimumDuration) {
+      finalizedSession = {
+        ...currentSession,
+        duration: currentSession.fragmentedDuration,
+        // Only keep titles in fragmentedActivity
+        fragmentedActivity: [...currentSession.fragmentedActivity],
+      };
+      pushSession(finalizedSession);
+      // Start a new session (could be long or fragment, handled below)
+      currentSession = {
+        url,
+        title,
+        timestamp: now,
+        duration: 0,
+        isFragmented: false,
+        fragmentedDuration: 0,
+        fragmentedActivity: [],
+      };
+    } else {
+      // Not enough total duration yet, keep accumulating
+      currentSession = {
+        ...currentSession,
+        url,
+        title,
+        timestamp: now,
+        duration: 0,
+        isFragmented: true,
+        // Keep accumulating fragmentedDuration and fragmentedActivity
+      };
+    }
+  } else {
+    // Case 2: Previous session was long or first session
+    if (currentSession.duration > minimumDuration) {
+      // Finalize the long session
+      finalizedSession = {
+        ...currentSession,
+        timestamp: new Date(currentSession.timestamp).toISOString(),
+        fragmentedActivity: [],
+      };
+      pushSession(finalizedSession);
+      // Start a new session (could be long or fragment, handled below)
+      currentSession = {
+        url,
+        title,
+        timestamp: now,
+        duration: 0,
+        isFragmented: false,
+        fragmentedDuration: 0,
+        fragmentedActivity: [],
+      };
+    } else {
+      // Not long enough, start a new fragmented session
+      currentSession = {
+        url,
+        title,
+        timestamp: now,
+        duration: 0,
+        isFragmented: true,
+        fragmentedDuration: currentSession.duration,
+        fragmentedActivity: currentSession.title ? [currentSession.title] : [],
+      };
     }
   }
 
-  else if (currentSession.duration > minimumDuration) {
-    // Push a copy with ISO timestamp for sending
-    activityList.push({
-      ...currentSession,
-      timestamp: new Date(currentSession.timestamp).toISOString(),
-    });
-    console.log("Activity tracked:", currentSession);
-      // Update last activity
-  let newSession = {
-    url,
-    title,
-    timestamp: now, // Store as number
-    duration: 0,
-    isFragmented: false,
-    fragmentedDuration: 0,
-    fragmentedActivity: [],
-  };
-  }
-  else {
-    //  create new fragmented activity
-    currentSession.isFragmented = true;
-    currentSession.fragmentedDuration = currentSession.duration;
-    currentSession.fragmentedActivity.push(currentSession.title);
-
-  }
-
-      // Update last activity
-      let newSession = {
-        url,
-        title,
-        timestamp: now, // Store as number
-        duration: 0,
-        isFragmented: currentSession.isFragmented,
-        fragmentedDuration: currentSession.fragmentedDuration,
-        fragmentedActivity: currentSession.fragmentedActivity,
-
-      };
-  // Persist newSession to storage
-  chrome.storage.local.set({ currentSession: newSession });
-  // Persist activityList to storage
+  // Persist currentSession and activityList
+  chrome.storage.local.set({ currentSession });
   chrome.storage.local.set({ activityList });
 
   // Send to n8n every time activity is updated
