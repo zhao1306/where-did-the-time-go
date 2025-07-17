@@ -7,7 +7,7 @@ let lastActivity = {
 };
 
 // Restore lastActivity from storage on startup
-browser.storage.local.get("lastActivity").then((result) => {
+chrome.storage.local.get(["lastActivity"], (result) => {
   if (result.lastActivity) {
     lastActivity = result.lastActivity;
   }
@@ -16,35 +16,32 @@ browser.storage.local.get("lastActivity").then((result) => {
 let activityList = [];
 
 // Restore activityList from storage on startup
-browser.storage.local.get("activityList").then((result) => {
+chrome.storage.local.get(["activityList"], (result) => {
   if (result.activityList) {
     activityList = result.activityList;
   }
 });
 
 // Track when a tab is updated (page load completes)
-browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab.active) {
     processActivity(tab.url, tab.title);
   }
 });
 
 // Track when user switches tabs
-browser.tabs.onActivated.addListener((activeInfo) => {
-  browser.tabs.get(activeInfo.tabId).then((tab) => {
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  chrome.tabs.get(activeInfo.tabId, (tab) => {
     processActivity(tab.url, tab.title);
   });
 });
 
 // Core processing function
 function processActivity(url, title) {
-  // Skip if same URL as last
-  if (url === lastActivity.url) {
-    return;
-  }
   const now = Date.now();
+  const minimumDuration = 
 
-  sanitizedActivity = {
+  const sanitizedActivity = {
     url: sanitizeUrl(url),
     title: title,
     timestamp: new Date(now).toISOString(),
@@ -77,9 +74,9 @@ function processActivity(url, title) {
     duration: 0,
   };
   // Persist lastActivity to storage
-  browser.storage.local.set({ lastActivity });
+  chrome.storage.local.set({ lastActivity });
   // Persist activityList to storage
-  browser.storage.local.set({ activityList });
+  chrome.storage.local.set({ activityList });
 
   // Send to n8n every time activity is updated
   if (activityList.length >= 1) {
@@ -87,7 +84,7 @@ function processActivity(url, title) {
     sendToN8n(activityList);
     // Reset activities after sending
     activityList = [];
-    browser.storage.local.set({ activityList });
+    chrome.storage.local.set({ activityList });
   }
 
   return;

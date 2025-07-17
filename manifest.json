@@ -1,23 +1,26 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Activity Tracker for n8n",
   "version": "1.1",
   "description": "Tracks browsing activity and sends to n8n",
-
   "permissions": [
     "tabs",
     "webNavigation",
-    "storage",
-    "http://*/",
-    "https://*/"
+    "storage"
   ],
-
-  "background": {
-    "scripts": ["background.js"],
-    "persistent": false
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_icon": {              
+      "16": "images/icon.png"
+    },
+    "default_title": "Click Me",   
+    "default_popup": "popup.html",
+    "default_state": "enabled"
   },
-
-  "icons": {
-    "48": "icon-48.png"
+  "background": {
+    "service_worker": "background.js"
   }
 }
