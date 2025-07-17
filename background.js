@@ -39,7 +39,7 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 // Core processing function
 function processActivity(url, title) {
   const now = Date.now();
-  const minimumDuration = 
+  const minimumDuration = 10000;
 
   const sanitizedActivity = {
     url: sanitizeUrl(url),
