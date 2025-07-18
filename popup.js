@@ -99,15 +99,29 @@ document.getElementById('activityListBtn').addEventListener('click', async () =>
     const activities = activityList.map((activity, index) => {
       const duration = activity.duration ? Math.round(activity.duration / 1000) + 's' : 'N/A';
       const time = activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'N/A';
-      return `
-        <div style="margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-          <b>Activity ${index + 1}:</b><br>
-          Title: ${activity.title}<br>
-          URL: ${activity.url}<br>
-          Duration: ${duration}<br>
-          Time: ${time}
-        </div>
-      `;
+      if (activity.title === 'fragmented') {
+        const fragTitles = activity.fragmentedActivity && activity.fragmentedActivity.length
+          ? activity.fragmentedActivity.map(t => `<li>${t}</li>`).join('')
+          : '<li>(none)</li>';
+        return `
+          <div style="margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+            <b>Activity ${index + 1} (Fragmented):</b><br>
+            <ul>${fragTitles}</ul>
+            Total Fragmented Duration: ${duration}<br>
+            Time: ${time}
+          </div>
+        `;
+      } else {
+        return `
+          <div style="margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+            <b>Activity ${index + 1}:</b><br>
+            Title: ${activity.title}<br>
+            URL: ${activity.url}<br>
+            Duration: ${duration}<br>
+            Time: ${time}
+          </div>
+        `;
+      }
     }).join('');
     
     infoDiv.innerHTML = `<b>Activity List (${activityList.length} items):</b><br>${activities}`;

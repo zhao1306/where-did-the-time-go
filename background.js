@@ -48,6 +48,12 @@ const enterSite = (url, title) => {
     return;
   }
 
+  // return if url is empty
+  if (url === "") {
+    console.log('URL is empty, returning early');
+    return;
+  }
+
   const now = Date.now();
   const minimumDuration = 5000; // 5 seconds, in ms
 
