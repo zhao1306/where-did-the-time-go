@@ -50,9 +50,19 @@ const showpreviousSession = async () => {
     infoDiv.textContent = 'No activity recorded yet.';
     updateFragmentedButtonState(null);
   }
+  console.log(result.previousSession);
+  console.log(result.activityList);
 };
 
+const clearActivity = async () => {
+  await setInStorage({ previousSession: null, activityList: [] });
+  showpreviousSession();
+};
+
+
 document.getElementById('currPage').addEventListener('click', showpreviousSession);
+
+document.getElementById('stop').addEventListener('click', clearActivity);
 
 document.getElementById('fragmentedBtn').addEventListener('click', async () => {
   const result = await getFromStorage(['previousSession']);
@@ -68,6 +78,32 @@ document.getElementById('fragmentedBtn').addEventListener('click', async () => {
     infoDiv.textContent = 'No fragmented activity.';
   }
   updateFragmentedButtonState(session);
+});
+
+document.getElementById('activityListBtn').addEventListener('click', async () => {
+  const result = await getFromStorage(['activityList']);
+  const infoDiv = document.getElementById('activityInfo');
+  const activityList = result.activityList || [];
+  
+  if (activityList.length > 0) {
+    const activities = activityList.map((activity, index) => {
+      const duration = activity.duration ? `${activity.duration}s` : 'N/A';
+      const time = activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'N/A';
+      return `
+        <div style="margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+          <b>Activity ${index + 1}:</b><br>
+          Title: ${activity.title}<br>
+          URL: ${activity.url}<br>
+          Duration: ${duration}<br>
+          Time: ${time}
+        </div>
+      `;
+    }).join('');
+    
+    infoDiv.innerHTML = `<b>Activity List (${activityList.length} items):</b><br>${activities}`;
+  } else {
+    infoDiv.textContent = 'No activities recorded yet.';
+  }
 });
 
 // Initial state on popup open

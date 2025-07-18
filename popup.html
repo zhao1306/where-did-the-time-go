@@ -55,8 +55,15 @@
         <button id="stop">Stop</button>
         <button id="currPage">Show Current Page</button>
         <button id="fragmentedBtn" disabled>Show Fragmented Activity</button>
+        <button id="activityListBtn">Show Activity List</button>
       </div>
       <div id="activityInfo"></div>
+      <div style="margin: 16px;">
+        <button id="debugBtn" style="background: #ff9800; color: white;">Toggle Debug</button>
+        <div id="debugPanel" style="display: none; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
+          <div id="debugLogs"></div>
+        </div>
+      </div>
       <script src="popup.js"></script>
   </body>
 </html>

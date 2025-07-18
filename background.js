@@ -41,33 +41,42 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 
 // Core processing function
 const enterSite = (url, title) => {
+  console.log('enterSite called with:', { url, title });
+  
   if (url === previousSession.url && title === previousSession.title) {
+    console.log('Same URL/title, returning early');
     return;
   }
 
   const now = Date.now();
-  const minimumDuration = 60000; // 60 seconds
+  const minimumDuration = 5000; // 5 seconds
 
   // Calculate duration of last session
   if (previousSession.timestamp) {
     const duration = now - previousSession.timestamp;
     previousSession.duration = Math.floor(duration / 1000); // Convert to seconds
+    console.log('Previous session duration:', previousSession.duration, 'seconds');
   }
 
   // Helper: finalize and push a session
   const pushSession = (session) => {
+    console.log('pushSession called with:', session);
     activityList.push({
       ...session,
       timestamp: new Date(session.timestamp).toISOString(),
-      // Only keep titles in fragmentedActivity
-      fragmentedActivity: session.fragmentedActivity ? [...session.fragmentedActivity] : [],
     });
     console.log("Activity tracked:", session);
+    console.log("Current activityList length:", activityList.length);
+    chrome.storage.local.set({ activityList }, () => {
+      console.log('Activity list saved to storage');
+    });
   };
 
   // Case 1: Previous session has fragments
   if (previousSession.hasFragments) {
+    console.log('Previous session has fragments');
     if (previousSession.duration >= minimumDuration) {
+      console.log('Previous session duration >= minimum, pushing fragments and current session');
       // Previous session has fragments AND itself is long enough
       // Push fragments as a session, then push itself as a session
       const fragmentedSession = {
@@ -86,6 +95,7 @@ const enterSite = (url, title) => {
       };
       pushSession(currentSession);
     } else if (previousSession.fragmentedDuration + previousSession.duration >= minimumDuration) {
+      console.log('Combined duration >= minimum, pushing combined fragments');
       // Previous session has fragments, itself is short, but together they're long enough
       // Add itself to fragments and push combined
       const combinedFragments = {
@@ -97,6 +107,7 @@ const enterSite = (url, title) => {
       };
       pushSession(combinedFragments);
     } else {
+      console.log('Combined duration still < minimum, adding to fragments');
       // Previous session has fragments, itself is short, together still short
       // Add itself to fragments, don't push anything
       previousSession = {
@@ -106,8 +117,10 @@ const enterSite = (url, title) => {
       };
     }
   } else {
+    console.log('Previous session has no fragments');
     // Case 2: Previous session has no fragments
     if (previousSession.duration >= minimumDuration) {
+      console.log('Previous session duration >= minimum, pushing current session');
       // Previous session no fragments + itself is long enough
       // Push itself
       const currentSession = {
@@ -116,6 +129,7 @@ const enterSite = (url, title) => {
       };
       pushSession(currentSession);
     } else {
+      console.log('Previous session duration < minimum, adding to fragments');
       // Previous session no fragments + itself is short
       // Add itself to fragments, don't push
       previousSession = {
@@ -127,20 +141,21 @@ const enterSite = (url, title) => {
     }
   }
 
-  // Start a new session with new title, url, and timestamp
+  // Start a new session with new title, url, and timestamp, retain fragments if any
   previousSession = {
+    ...previousSession,
     url,
     title,
     timestamp: now,
     duration: 0,
-    hasFragments: false,
-    fragmentedDuration: 0,
-    fragmentedActivity: [],
   };
 
-  // Persist previousSession and activityList
-  chrome.storage.local.set({ previousSession });
-  chrome.storage.local.set({ activityList });
+  console.log('New previousSession:', previousSession);
+
+  // Persist previousSession only (activityList is saved in pushSession)
+  chrome.storage.local.set({ previousSession }, () => {
+    console.log('Previous session saved to storage');
+  });
 
   // Send to n8n every time activity is updated, temp disabled
   /*
