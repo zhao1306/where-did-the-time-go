@@ -4,7 +4,7 @@ let previousSession = {
   title: "",
   timestamp: 0, // Store as number (ms since epoch)
   duration: 0,
-  isFragmented: false,
+  hasFragments: false,
   fragmentedDuration: 0,
   fragmentedActivity: [],
 };
@@ -40,13 +40,13 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 });
 
 // Core processing function
-function enterSite(url, title) {
+const enterSite = (url, title) => {
   if (url === previousSession.url && title === previousSession.title) {
     return;
   }
 
   const now = Date.now();
-  const minimumDuration = 60000;
+  const minimumDuration = 60000; // 60 seconds
 
   // Calculate duration of last session
   if (previousSession.timestamp) {
@@ -54,10 +54,8 @@ function enterSite(url, title) {
     previousSession.duration = Math.floor(duration / 1000); // Convert to seconds
   }
 
-  let finalizedSession = null;
-
   // Helper: finalize and push a session
-  function pushSession(session) {
+  const pushSession = (session) => {
     activityList.push({
       ...session,
       timestamp: new Date(session.timestamp).toISOString(),
@@ -65,79 +63,87 @@ function enterSite(url, title) {
       fragmentedActivity: session.fragmentedActivity ? [...session.fragmentedActivity] : [],
     });
     console.log("Activity tracked:", session);
-  }
+  };
 
-  // Case 1: Previous session was fragmented
-  if (previousSession.isFragmented) {
-    if (previousSession.fragmentedDuration + previousSession.duration > minimumDuration) {
-      // The previous session is long enough, so we can finalize it alonside the carried fragmented session
-      if (previousSession.duration > minimumDuration) {
-        finalizedSession = {
-          ...previousSession,
-          title: "fragmented",
-          url: "fragmented",
-          duration: previousSession.fragmentedDuration,
-        };
-        pushSession(finalizedSession);
-        finalizedSession = {
-          ...previousSession,
-          fragmentedDuration: 0,
-          fragmentedActivity: [],
-          isFragmented: false,
-        };
-        pushSession(finalizedSession);
-      }
-      else {
-        // The previous session is not long enough, so we can only finalize the carried fragmented session
-        finalizedSession = {
-          ...previousSession,
-          title: "fragmented",
-          url: "fragmented",
-          duration: previousSession.fragmentedDuration,
-        };
-        pushSession(finalizedSession);
-      }
+  // Case 1: Previous session has fragments
+  if (previousSession.hasFragments) {
+    if (previousSession.duration >= minimumDuration) {
+      // Previous session has fragments AND itself is long enough
+      // Push fragments as a session, then push itself as a session
+      const fragmentedSession = {
+        ...previousSession,
+        title: "fragmented",
+        url: "fragmented",
+        duration: previousSession.fragmentedDuration,
+      };
+      pushSession(fragmentedSession);
+      
+      const currentSession = {
+        ...previousSession,
+        fragmentedDuration: 0,
+        fragmentedActivity: [],
+        hasFragments: false,
+      };
+      pushSession(currentSession);
+    } else if (previousSession.fragmentedDuration + previousSession.duration >= minimumDuration) {
+      // Previous session has fragments, itself is short, but together they're long enough
+      // Add itself to fragments and push combined
+      const combinedFragments = {
+        ...previousSession,
+        title: "fragmented",
+        url: "fragmented",
+        duration: previousSession.fragmentedDuration + previousSession.duration,
+        fragmentedActivity: [...previousSession.fragmentedActivity, previousSession.title],
+      };
+      pushSession(combinedFragments);
     } else {
-      // Keep accumulating fragmented duration and activity
+      // Previous session has fragments, itself is short, together still short
+      // Add itself to fragments, don't push anything
       previousSession = {
         ...previousSession,
         fragmentedDuration: previousSession.fragmentedDuration + previousSession.duration,
-        fragmentedActivity: [...previousSession.fragmentedActivity, title],
+        fragmentedActivity: [...previousSession.fragmentedActivity, previousSession.title],
       };
     }
   } else {
-    // Case 2: Previous session was long or first session
-    if (previousSession.duration > minimumDuration) {
-      // Finalize the long session
-      finalizedSession = {
+    // Case 2: Previous session has no fragments
+    if (previousSession.duration >= minimumDuration) {
+      // Previous session no fragments + itself is long enough
+      // Push itself
+      const currentSession = {
         ...previousSession,
         fragmentedActivity: [],
       };
-      pushSession(finalizedSession);
+      pushSession(currentSession);
     } else {
-      // Not long enough, start a new fragmented session using the current session data
+      // Previous session no fragments + itself is short
+      // Add itself to fragments, don't push
       previousSession = {
         ...previousSession,
-        isFragmented: true,
+        hasFragments: true,
         fragmentedDuration: previousSession.duration,
         fragmentedActivity: previousSession.title ? [previousSession.title] : [],
       };
     }
   }
 
-  // now we can start a new session
+  // Start a new session with new title, url, and timestamp
   previousSession = {
-    ...previousSession,
     url,
     title,
     timestamp: now,
+    duration: 0,
+    hasFragments: false,
+    fragmentedDuration: 0,
+    fragmentedActivity: [],
   };
 
   // Persist previousSession and activityList
   chrome.storage.local.set({ previousSession });
   chrome.storage.local.set({ activityList });
 
-  // Send to n8n every time activity is updated
+  // Send to n8n every time activity is updated, temp disabled
+  /*
   if (activityList.length >= 1) {
     console.log("Sending activity to n8n:", activityList);
     sendToN8n(activityList);
@@ -145,9 +151,9 @@ function enterSite(url, title) {
     activityList = [];
     chrome.storage.local.set({ activityList });
   }
-
+  */
   return;
-}
+};
 
 // Sanitize URLs (remove personal data)
 function sanitizeUrl(url) {
