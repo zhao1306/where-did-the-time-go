@@ -69,38 +69,40 @@ function enterSite(url, title) {
 
   // Case 1: Previous session was fragmented
   if (previousSession.isFragmented) {
-    if (previousSession.title && (previousSession.fragmentedDuration + previousSession.duration) > minimumDuration) {
-      
-    }
-    // If total fragmented duration now exceeds minimum, finalize the fragmented session
-    if (previousSession.fragmentedDuration > minimumDuration) {
-      finalizedSession = {
-        ...previousSession,
-        duration: previousSession.fragmentedDuration,
-        // Only keep titles in fragmentedActivity
-        fragmentedActivity: [...previousSession.fragmentedActivity],
-      };
-      pushSession(finalizedSession);
-      // Start a new session (could be long or fragment, handled below)
-      previousSession = {
-        url,
-        title,
-        timestamp: now,
-        duration: 0,
-        isFragmented: false,
-        fragmentedDuration: 0,
-        fragmentedActivity: [],
-      };
+    if (previousSession.fragmentedDuration + previousSession.duration > minimumDuration) {
+      // The previous session is long enough, so we can finalize it alonside the carried fragmented session
+      if (previousSession.duration > minimumDuration) {
+        finalizedSession = {
+          ...previousSession,
+          title: "fragmented",
+          url: "fragmented",
+          duration: previousSession.fragmentedDuration,
+        };
+        pushSession(finalizedSession);
+        finalizedSession = {
+          ...previousSession,
+          fragmentedDuration: 0,
+          fragmentedActivity: [],
+          isFragmented: false,
+        };
+        pushSession(finalizedSession);
+      }
+      else {
+        // The previous session is not long enough, so we can only finalize the carried fragmented session
+        finalizedSession = {
+          ...previousSession,
+          title: "fragmented",
+          url: "fragmented",
+          duration: previousSession.fragmentedDuration,
+        };
+        pushSession(finalizedSession);
+      }
     } else {
-      // Not enough total duration yet, keep accumulating
+      // Keep accumulating fragmented duration and activity
       previousSession = {
         ...previousSession,
-        url,
-        title,
-        timestamp: now,
-        duration: 0,
-        isFragmented: true,
-        // Keep accumulating fragmentedDuration and fragmentedActivity
+        fragmentedDuration: previousSession.fragmentedDuration + previousSession.duration,
+        fragmentedActivity: [...previousSession.fragmentedActivity, title],
       };
     }
   } else {
@@ -109,20 +111,9 @@ function enterSite(url, title) {
       // Finalize the long session
       finalizedSession = {
         ...previousSession,
-        timestamp: new Date(previousSession.timestamp).toISOString(),
         fragmentedActivity: [],
       };
       pushSession(finalizedSession);
-      // Start a new session (could be long or fragment, handled below)
-      previousSession = {
-        url,
-        title,
-        timestamp: now,
-        duration: 0,
-        isFragmented: false,
-        fragmentedDuration: 0,
-        fragmentedActivity: [],
-      };
     } else {
       // Not long enough, start a new fragmented session using the current session data
       previousSession = {
@@ -133,6 +124,14 @@ function enterSite(url, title) {
       };
     }
   }
+
+  // now we can start a new session
+  previousSession = {
+    ...previousSession,
+    url,
+    title,
+    timestamp: now,
+  };
 
   // Persist previousSession and activityList
   chrome.storage.local.set({ previousSession });
