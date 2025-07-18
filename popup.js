@@ -55,17 +55,11 @@ const showpreviousSession = async () => {
 };
 
 const clearActivity = async () => {
-  // Reset previousSession to initial state (no fragments, no activity, etc.)
-  const emptySession = {
-    url: "",
-    title: "",
-    timestamp: 0,
-    duration: 0,
-    hasFragments: false,
-    fragmentedDuration: 0,
-    fragmentedActivity: [],
-  };
-  await setInStorage({ previousSession: emptySession, activityList: [] });
+  await new Promise((resolve) => {
+    chrome.runtime.sendMessage('clearAllActivity', (response) => {
+      resolve();
+    });
+  });
   showpreviousSession();
 };
 

@@ -39,6 +39,24 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   });
 });
 
+// Listen for clearAllActivity message from popup to clear in-memory and storage
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message === 'clearAllActivity') {
+    activityList = [];
+    previousSession = {
+      url: "",
+      title: "",
+      timestamp: 0,
+      duration: 0,
+      hasFragments: false,
+      fragmentedDuration: 0,
+      fragmentedActivity: [],
+    };
+    chrome.storage.local.set({ activityList: [], previousSession });
+    sendResponse({ success: true });
+  }
+});
+
 // Core processing function
 const enterSite = (url, title) => {
   console.log('enterSite called with:', { url, title });
@@ -48,12 +66,32 @@ const enterSite = (url, title) => {
     return;
   }
 
-  // return if url is empty
-  if (url === "") {
-    console.log('URL is empty, returning early');
+  // return if url or title is empty
+  if (url === "" || title === "") {
+    console.log('URL or title is empty, returning early');
     return;
   }
 
+  // return if previousSession is empty (first time)
+  if (previousSession.url === "" || previousSession.title === "") {
+    console.log('Previous session is empty, returning early after starting session');
+      // Start a new session with new title, url, and timestamp, retain fragments if any
+    previousSession = {
+      ...previousSession,
+      url,
+      title,
+      timestamp: Date.now(),
+      duration: 0,
+    };
+
+    console.log('New previousSession:', previousSession);
+
+    // Persist previousSession only (activityList is saved in pushSession)
+    chrome.storage.local.set({ previousSession }, () => {
+      console.log('Previous session saved to storage');
+    });
+    return;
+  }
   const now = Date.now();
   const minimumDuration = 5000; // 5 seconds, in ms
 
@@ -100,6 +138,10 @@ const enterSite = (url, title) => {
         hasFragments: false,
       };
       pushSession(previousSessionCopy);
+      // now reset fragmentedActivity
+      previousSession.fragmentedActivity = [];
+      previousSession.hasFragments = false;
+      previousSession.fragmentedDuration = 0;
     } else if (previousSession.fragmentedDuration + previousSession.duration >= minimumDuration) {
       console.log('Combined duration >= minimum, pushing combined fragments');
       // Previous session has fragments, itself is short, but together they're long enough
@@ -115,6 +157,10 @@ const enterSite = (url, title) => {
           : [...previousSession.fragmentedActivity, previousSession.title],
       };
       pushSession(combinedFragments);
+      // now reset fragmentedActivity
+      previousSession.fragmentedActivity = [];
+      previousSession.hasFragments = false;
+      previousSession.fragmentedDuration = 0;
     } else {
       console.log('Combined duration still < minimum, adding to fragments');
       // Previous session has fragments, itself is short, together still short
