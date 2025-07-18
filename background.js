@@ -49,13 +49,13 @@ const enterSite = (url, title) => {
   }
 
   const now = Date.now();
-  const minimumDuration = 5000; // 5 seconds
+  const minimumDuration = 5000; // 5 seconds, in ms
 
   // Calculate duration of last session
   if (previousSession.timestamp) {
     const duration = now - previousSession.timestamp;
-    previousSession.duration = Math.floor(duration / 1000); // Convert to seconds
-    console.log('Previous session duration:', previousSession.duration, 'seconds');
+    previousSession.duration = duration; // Keep in milliseconds
+    console.log('Previous session duration:', previousSession.duration, 'ms');
   }
 
   // Helper: finalize and push a session
@@ -87,33 +87,39 @@ const enterSite = (url, title) => {
       };
       pushSession(fragmentedSession);
       
-      const currentSession = {
+      const previousSessionCopy = {
         ...previousSession,
         fragmentedDuration: 0,
         fragmentedActivity: [],
         hasFragments: false,
       };
-      pushSession(currentSession);
+      pushSession(previousSessionCopy);
     } else if (previousSession.fragmentedDuration + previousSession.duration >= minimumDuration) {
       console.log('Combined duration >= minimum, pushing combined fragments');
       // Previous session has fragments, itself is short, but together they're long enough
       // Add itself to fragments and push combined
+      const alreadyInFragments = previousSession.fragmentedActivity.includes(previousSession.title);
       const combinedFragments = {
         ...previousSession,
         title: "fragmented",
         url: "fragmented",
         duration: previousSession.fragmentedDuration + previousSession.duration,
-        fragmentedActivity: [...previousSession.fragmentedActivity, previousSession.title],
+        fragmentedActivity: alreadyInFragments
+          ? [...previousSession.fragmentedActivity]
+          : [...previousSession.fragmentedActivity, previousSession.title],
       };
       pushSession(combinedFragments);
     } else {
       console.log('Combined duration still < minimum, adding to fragments');
       // Previous session has fragments, itself is short, together still short
       // Add itself to fragments, don't push anything
+      const alreadyInFragments = previousSession.fragmentedActivity.includes(previousSession.title);
       previousSession = {
         ...previousSession,
         fragmentedDuration: previousSession.fragmentedDuration + previousSession.duration,
-        fragmentedActivity: [...previousSession.fragmentedActivity, previousSession.title],
+        fragmentedActivity: alreadyInFragments
+          ? [...previousSession.fragmentedActivity]
+          : [...previousSession.fragmentedActivity, previousSession.title],
       };
     }
   } else {
@@ -123,11 +129,11 @@ const enterSite = (url, title) => {
       console.log('Previous session duration >= minimum, pushing current session');
       // Previous session no fragments + itself is long enough
       // Push itself
-      const currentSession = {
+      const previousSessionCopy = {
         ...previousSession,
         fragmentedActivity: [],
       };
-      pushSession(currentSession);
+      pushSession(previousSessionCopy);
     } else {
       console.log('Previous session duration < minimum, adding to fragments');
       // Previous session no fragments + itself is short

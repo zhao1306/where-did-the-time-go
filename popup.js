@@ -44,7 +44,7 @@ const showpreviousSession = async () => {
   const infoDiv = document.getElementById('activityInfo');
   if (result.previousSession) {
     const { url, title, timestamp, duration } = result.previousSession;
-    infoDiv.innerHTML = `<b>Current Session:</b><br>URL: ${url}<br>Title: ${title}<br>Time: ${new Date(timestamp).toLocaleString()}<br>Duration: ${duration ? duration + 's' : 'N/A'}`;
+    infoDiv.innerHTML = `<b>Current Session:</b><br>URL: ${url}<br>Title: ${title}<br>Time: ${new Date(timestamp).toLocaleString()}<br>Duration: ${duration ? Math.round(duration / 1000) + 's' : 'N/A'}`;
     updateFragmentedButtonState(result.previousSession);
   } else {
     infoDiv.textContent = 'No activity recorded yet.';
@@ -55,7 +55,17 @@ const showpreviousSession = async () => {
 };
 
 const clearActivity = async () => {
-  await setInStorage({ previousSession: null, activityList: [] });
+  // Reset previousSession to initial state (no fragments, no activity, etc.)
+  const emptySession = {
+    url: "",
+    title: "",
+    timestamp: 0,
+    duration: 0,
+    hasFragments: false,
+    fragmentedDuration: 0,
+    fragmentedActivity: [],
+  };
+  await setInStorage({ previousSession: emptySession, activityList: [] });
   showpreviousSession();
 };
 
@@ -72,7 +82,7 @@ document.getElementById('fragmentedBtn').addEventListener('click', async () => {
     const titles = session.fragmentedActivity && session.fragmentedActivity.length
       ? session.fragmentedActivity.map(t => `<li>${t}</li>`).join('')
       : '<li>(none)</li>';
-    const duration = session.fragmentedDuration ? Math.floor(session.fragmentedDuration / 1000) : 0;
+    const duration = session.fragmentedDuration ? Math.round(session.fragmentedDuration / 1000) : 0;
     infoDiv.innerHTML = `<b>Fragmented Activity:</b><br><ul>${titles}</ul>Total Fragmented Duration: ${duration}s`;
   } else {
     infoDiv.textContent = 'No fragmented activity.';
@@ -87,7 +97,7 @@ document.getElementById('activityListBtn').addEventListener('click', async () =>
   
   if (activityList.length > 0) {
     const activities = activityList.map((activity, index) => {
-      const duration = activity.duration ? `${activity.duration}s` : 'N/A';
+      const duration = activity.duration ? Math.round(activity.duration / 1000) + 's' : 'N/A';
       const time = activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'N/A';
       return `
         <div style="margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
