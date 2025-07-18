@@ -9,22 +9,37 @@ function updateFragmentedButtonState(currentSession) {
   }
 }
 
-function showCurrentSession() {
+function updateCurrentSession(updater, callback) {
   chrome.storage.local.get(['currentSession'], function(result) {
-    const infoDiv = document.getElementById('activityInfo');
-    if (result.currentSession) {
-      const { url, title, timestamp } = result.currentSession;
-      let duration = result.currentSession.duration;
-      if (timestamp) {
-        duration = Date.now() - timestamp;
-        duration = Math.floor(duration / 1000);
-      }
-      infoDiv.innerHTML = `<b>Current Session:</b><br>URL: ${url}<br>Title: ${title}<br>Time: ${new Date(timestamp).toLocaleString()}<br>Duration: ${duration ? duration + 's' : 'N/A'}`;
-      updateFragmentedButtonState(result.currentSession);
-    } else {
-      infoDiv.textContent = 'No activity recorded yet.';
-      updateFragmentedButtonState(null);
+    let currentSession = result.currentSession;
+    if (currentSession) {
+      updater(currentSession);
+      chrome.storage.local.set({ currentSession }, callback);
+    } else if (callback) {
+      callback();
     }
+  });
+}
+
+function showCurrentSession() {
+  updateCurrentSession(function(currentSession) {
+    if (currentSession.timestamp) {
+      let duration = Date.now() - currentSession.timestamp;
+      duration = Math.floor(duration / 1000);
+      currentSession.duration = duration;
+    }
+  }, function() {
+    chrome.storage.local.get(['currentSession'], function(result) {
+      const infoDiv = document.getElementById('activityInfo');
+      if (result.currentSession) {
+        const { url, title, timestamp, duration } = result.currentSession;
+        infoDiv.innerHTML = `<b>Current Session:</b><br>URL: ${url}<br>Title: ${title}<br>Time: ${new Date(timestamp).toLocaleString()}<br>Duration: ${duration ? duration + 's' : 'N/A'}`;
+        updateFragmentedButtonState(result.currentSession);
+      } else {
+        infoDiv.textContent = 'No activity recorded yet.';
+        updateFragmentedButtonState(null);
+      }
+    });
   });
 }
 
