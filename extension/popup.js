@@ -67,19 +67,32 @@ const showpreviousSession = async () => {
   }
 };
 
-const clearActivity = async () => {
+
+document.getElementById('summary').addEventListener('click', async () => {
+  // also process the current session
+  await showpreviousSession();
+  const result = await getFromStorage(['activityList']);
+  const activityList = result.activityList || [];
+  //send activityList to summary.js
+  const summary = await fetch('/api/summary', {
+    method: 'POST',
+    // TODO: add params, for now just send the activityList
+    body: JSON.stringify({ activityList, params: {}}),
+  });
+  const summaryData = await summary.json();
+  console.log(summaryData);
+});
+
+document.getElementById('currPage').addEventListener('click', showpreviousSession);
+
+document.getElementById('clearActivity').addEventListener('click', async () => {
   await new Promise((resolve) => {
     chrome.runtime.sendMessage('clearAllActivity', (response) => {
       resolve();
     });
   });
   showpreviousSession();
-};
-
-
-document.getElementById('currPage').addEventListener('click', showpreviousSession);
-
-document.getElementById('stop').addEventListener('click', clearActivity);
+});
 
 document.getElementById('fragmentedBtn').addEventListener('click', async () => {
   const result = await getFromStorage(['previousSession']);
@@ -103,6 +116,7 @@ document.getElementById('activityListBtn').addEventListener('click', async () =>
   const activityList = result.activityList || [];
   
   if (activityList.length > 0) {
+    console.log("Current activityList:", activityList);
     const activities = activityList.map((activity, index) => {
       const duration = activity.duration ? activity.duration : 0;
       const time = activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'N/A';
