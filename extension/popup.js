@@ -74,13 +74,19 @@ document.getElementById('summary').addEventListener('click', async () => {
   const result = await getFromStorage(['activityList']);
   const activityList = result.activityList || [];
   //send activityList to summary.js
-  const summary = await fetch('/api/summary', {
-    method: 'POST',
-    // TODO: add params, for now just send the activityList
-    body: JSON.stringify({ activityList, params: {}}),
-  });
-  const summaryData = await summary.json();
-  console.log(summaryData);
+  document.getElementById('activityInfo').textContent = 'Loading summary...';
+  try {
+    const summary = await fetch('/api/summary', {
+      method: 'POST',
+      // TODO: add params, for now just send the activityList
+      body: JSON.stringify({ activityList, params: {}}),
+    });
+    const summaryData = await summary.json();
+    console.log(summaryData);
+    document.getElementById('activityInfo').textContent = summaryData.summary;
+  } catch (e) {
+    document.getElementById('activityInfo').textContent = 'Error fetching summary.';
+  }
 });
 
 document.getElementById('currPage').addEventListener('click', showpreviousSession);
