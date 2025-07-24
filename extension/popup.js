@@ -76,10 +76,10 @@ document.getElementById('summary').addEventListener('click', async () => {
   //send activityList to summary.js
   document.getElementById('activityInfo').textContent = 'Loading summary...';
   try {
-    const summary = await fetch('/api/summary', {
+    const summary = await fetch('https://where-did-the-time-go.vercel.app/api/summary', {
       method: 'POST',
-      // TODO: add params, for now just send the activityList
-      body: JSON.stringify({ activityList, params: {}}),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activityList, params: {} }),
     });
     const summaryData = await summary.json();
     console.log(summaryData);
