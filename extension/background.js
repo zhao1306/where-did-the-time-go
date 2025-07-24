@@ -93,7 +93,7 @@ const enterSite = (url, title) => {
     return;
   }
   const now = Date.now();
-  const minimumDuration = 5000; // 5 seconds, in ms
+  const minimumDuration = 30000; // 30 seconds, in ms
 
   // Calculate duration of last session
   if (previousSession.timestamp) {

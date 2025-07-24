@@ -23,7 +23,7 @@ const updatepreviousSession = async (updater) => {
 
 const updateFragmentedButtonState = (previousSession) => {
   const fragmentedBtn = document.getElementById('fragmentedBtn');
-  if (previousSession && previousSession.isFragmented) {
+  if (previousSession && previousSession.hasFragments) {
     fragmentedBtn.disabled = false;
     fragmentedBtn.classList.add('active');
   } else {
@@ -32,11 +32,25 @@ const updateFragmentedButtonState = (previousSession) => {
   }
 };
 
+// Helper to format duration as Xh Ym Zs
+function formatDuration(ms) {
+  if (!ms || isNaN(ms)) return 'N/A';
+  let totalSeconds = Math.round(ms / 1000);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  let hours = Math.floor(totalSeconds / 3600);
+  let minutes = Math.floor((totalSeconds % 3600) / 60);
+  let seconds = totalSeconds % 60;
+  let result = '';
+  if (hours > 0) result += `${hours}h `;
+  if (minutes > 0 || hours > 0) result += `${minutes}m `;
+  result += `${seconds}s`;
+  return result.trim();
+}
+
 const showpreviousSession = async () => {
   await updatepreviousSession((previousSession) => {
     if (previousSession.timestamp) {
       let duration = Date.now() - previousSession.timestamp;
-      duration = Math.floor(duration / 1000);
       previousSession.duration = duration;
     }
   });
@@ -44,14 +58,13 @@ const showpreviousSession = async () => {
   const infoDiv = document.getElementById('activityInfo');
   if (result.previousSession) {
     const { url, title, timestamp, duration } = result.previousSession;
-    infoDiv.innerHTML = `<b>Current Session:</b><br>URL: ${url}<br>Title: ${title}<br>Time: ${new Date(timestamp).toLocaleString()}<br>Duration: ${duration ? Math.round(duration / 1000) + 's' : 'N/A'}`;
+    infoDiv.innerHTML = `<b>Current Session:</b><br>URL: ${url}<br>Title: ${title}<br>Time: ${new Date(timestamp).toLocaleString()}<br>Duration: ${formatDuration(duration)}`;
+    console.log("hasFragments: " + result.previousSession.hasFragments);
     updateFragmentedButtonState(result.previousSession);
   } else {
     infoDiv.textContent = 'No activity recorded yet.';
     updateFragmentedButtonState(null);
   }
-  console.log(result.previousSession);
-  console.log(result.activityList);
 };
 
 const clearActivity = async () => {
@@ -72,12 +85,12 @@ document.getElementById('fragmentedBtn').addEventListener('click', async () => {
   const result = await getFromStorage(['previousSession']);
   const infoDiv = document.getElementById('activityInfo');
   const session = result.previousSession;
-  if (session && session.isFragmented) {
+  if (session && session.hasFragments) {
     const titles = session.fragmentedActivity && session.fragmentedActivity.length
       ? session.fragmentedActivity.map(t => `<li>${t}</li>`).join('')
       : '<li>(none)</li>';
-    const duration = session.fragmentedDuration ? Math.round(session.fragmentedDuration / 1000) : 0;
-    infoDiv.innerHTML = `<b>Fragmented Activity:</b><br><ul>${titles}</ul>Total Fragmented Duration: ${duration}s`;
+    const duration = session.fragmentedDuration ? session.fragmentedDuration : 0;
+    infoDiv.innerHTML = `<b>Fragmented Activity:</b><br><ul>${titles}</ul>Total Fragmented Duration: ${formatDuration(duration)}`;
   } else {
     infoDiv.textContent = 'No fragmented activity.';
   }
@@ -91,7 +104,7 @@ document.getElementById('activityListBtn').addEventListener('click', async () =>
   
   if (activityList.length > 0) {
     const activities = activityList.map((activity, index) => {
-      const duration = activity.duration ? Math.round(activity.duration / 1000) + 's' : 'N/A';
+      const duration = activity.duration ? activity.duration : 0;
       const time = activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'N/A';
       if (activity.title === 'fragmented') {
         const fragTitles = activity.fragmentedActivity && activity.fragmentedActivity.length
@@ -101,7 +114,7 @@ document.getElementById('activityListBtn').addEventListener('click', async () =>
           <div style="margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
             <b>Activity ${index + 1} (Fragmented):</b><br>
             <ul>${fragTitles}</ul>
-            Total Fragmented Duration: ${duration}<br>
+            Total Fragmented Duration: ${formatDuration(duration)}<br>
             Time: ${time}
           </div>
         `;
@@ -111,7 +124,7 @@ document.getElementById('activityListBtn').addEventListener('click', async () =>
             <b>Activity ${index + 1}:</b><br>
             Title: ${activity.title}<br>
             URL: ${activity.url}<br>
-            Duration: ${duration}<br>
+            Duration: ${formatDuration(duration)}<br>
             Time: ${time}
           </div>
         `;
