@@ -6,12 +6,6 @@ export default function handler(req, res) {
     console.log("Received activityList:", activityList);
     console.log("Received params:", params);
 
-    const summary = activityList.map(activity => {
-        return {
-            title: activity.title,
-            url: activity.url,
-            duration: activity.duration,
-        };
-    }).join('\n');
+    const summary = JSON.stringify(activityList);
     res.status(200).json({ summary });
 }
